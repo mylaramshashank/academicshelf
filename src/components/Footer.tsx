@@ -1,5 +1,6 @@
-import { BookOpen, Mail, Phone, MapPin } from "lucide-react";
+import { BookOpen, Mail, Phone, MapPin, Shield } from "lucide-react";
 import { Link } from "react-router-dom";
+import { Button } from "./ui/button";
 
 export const Footer = () => {
   return (
@@ -54,9 +55,12 @@ export const Footer = () => {
                 </Link>
               </li>
               <li>
-                <Link to="/admin" className="text-sm text-muted-foreground hover:text-primary">
-                  Admin
-                </Link>
+                <Button variant="outline" size="sm" asChild className="mt-2">
+                  <Link to="/admin" className="flex items-center gap-2">
+                    <Shield className="h-4 w-4" />
+                    Admin Portal
+                  </Link>
+                </Button>
               </li>
             </ul>
           </div>

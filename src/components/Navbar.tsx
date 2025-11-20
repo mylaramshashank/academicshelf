@@ -27,7 +27,7 @@ export const Navbar = ({ onLogout }: NavbarProps) => {
     { path: "/contact", label: "Contact" },
   ];
 
-  if (currentUser?.email === "admin@academicshelf.com") {
+  if (currentUser?.email === "admin@samskruti.edu") {
     navLinks.push({ path: "/admin", label: "Admin" });
   }
 

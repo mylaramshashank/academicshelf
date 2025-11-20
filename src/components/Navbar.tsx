@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { BookOpen, User, LogOut } from "lucide-react";
+import { BookOpen, User, LogOut, Shield } from "lucide-react";
 import { Button } from "./ui/button";
 import {
   DropdownMenu,
@@ -27,10 +27,6 @@ export const Navbar = ({ onLogout }: NavbarProps) => {
     { path: "/contact", label: "Contact" },
   ];
 
-  if (currentUser?.email === "admin@samskruti.edu") {
-    navLinks.push({ path: "/admin", label: "Admin" });
-  }
-
   return (
     <nav className="sticky top-0 z-50 bg-background border-b border-border">
       <div className="container mx-auto px-4">
@@ -53,6 +49,13 @@ export const Navbar = ({ onLogout }: NavbarProps) => {
           </div>
 
           <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" asChild>
+              <Link to="/admin" className="flex items-center gap-2">
+                <Shield className="h-4 w-4" />
+                Admin
+              </Link>
+            </Button>
+            
             {currentUser ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>

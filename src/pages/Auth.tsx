@@ -21,7 +21,20 @@ export default function Auth() {
     e.preventDefault();
 
     if (isLogin) {
-      // Login logic
+      // Admin login check first
+      if (formData.email === "admin@samskruti.edu" && formData.password === "admin123") {
+        const adminUser = {
+          id: "admin",
+          email: "admin@samskruti.edu",
+          name: "Admin",
+        };
+        localStorage.setItem("currentUser", JSON.stringify(adminUser));
+        toast.success("Welcome Admin!", { description: "Logged in successfully" });
+        navigate("/admin");
+        return;
+      }
+
+      // Regular user login
       const users = JSON.parse(localStorage.getItem("users") || "[]");
       const user = users.find(
         (u: any) => u.email === formData.email && u.password === formData.password

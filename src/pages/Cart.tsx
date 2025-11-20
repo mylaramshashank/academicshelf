@@ -203,6 +203,26 @@ export default function Cart() {
               </Label>
             </div>
           </RadioGroup>
+          
+          {paymentMethod === "upi" && (
+            <div className="mt-4 p-4 border rounded-lg bg-muted/50">
+              <h4 className="font-semibold mb-3 text-center">Scan QR Code to Pay</h4>
+              <div className="flex flex-col items-center gap-3">
+                <div className="bg-white p-4 rounded-lg">
+                  <img 
+                    src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=upi://pay?pa=samskruti@upi&pn=Samskruti%20College&am=" 
+                    alt="UPI QR Code" 
+                    className="w-48 h-48"
+                  />
+                </div>
+                <div className="text-center">
+                  <p className="text-sm text-muted-foreground mb-1">Or pay to UPI ID:</p>
+                  <p className="font-mono font-semibold text-primary">samskruti@upi</p>
+                  <p className="text-sm text-muted-foreground mt-2">Samskruti College of Engineering</p>
+                </div>
+              </div>
+            </div>
+          )}
           <div className="flex gap-2 mt-4">
             <Button variant="outline" onClick={() => setShowCheckout(false)} className="flex-1">
               Cancel

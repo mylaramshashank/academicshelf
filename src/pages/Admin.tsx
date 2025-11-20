@@ -16,7 +16,7 @@ export default function Admin() {
 
   useEffect(() => {
     const currentUser = JSON.parse(localStorage.getItem("currentUser") || "null");
-    if (!currentUser || currentUser.email !== "admin@academicshelf.com") {
+    if (!currentUser || currentUser.email !== "admin@samskruti.edu") {
       toast.error("Admin access only");
       navigate("/");
       return;
@@ -178,7 +178,7 @@ export default function Admin() {
                     </thead>
                     <tbody>
                       {users
-                        .filter((u) => u.email !== "admin@academicshelf.com")
+                        .filter((u) => u.email !== "admin@samskruti.edu")
                         .map((user) => (
                           <tr key={user.id} className="border-b">
                             <td className="p-4">{user.name}</td>
@@ -191,7 +191,7 @@ export default function Admin() {
                         ))}
                     </tbody>
                   </table>
-                  {users.filter((u) => u.email !== "admin@academicshelf.com").length === 0 && (
+                  {users.filter((u) => u.email !== "admin@samskruti.edu").length === 0 && (
                     <p className="text-center text-muted-foreground py-8">No users registered yet</p>
                   )}
                 </div>

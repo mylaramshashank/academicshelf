@@ -45,14 +45,73 @@ export default function Admin() {
     toast.success("Stock updated");
   };
 
-  const revenueData = [
-    { month: "Jan", revenue: 13000 },
-    { month: "Feb", revenue: 19000 },
-    { month: "Mar", revenue: 17000 },
-    { month: "Apr", revenue: 25000 },
-    { month: "May", revenue: 21000 },
-    { month: "Jun", revenue: 0 },
-  ];
+  // Calculate November stats
+  const getNovemberStats = () => {
+    const now = new Date();
+    const currentMonth = now.getMonth(); // 10 for November (0-indexed)
+    const currentYear = now.getFullYear();
+
+    const novemberOrders = orders.filter((order) => {
+      const orderDate = new Date(order.createdAt);
+      return orderDate.getMonth() === currentMonth && orderDate.getFullYear() === currentYear;
+    });
+
+    const totalRevenue = novemberOrders.reduce((sum, order) => sum + order.total, 0);
+    
+    let recordsQty = 0;
+    let recordsPrice = 0;
+    let bookletsQty = 0;
+    let bookletsPrice = 0;
+
+    novemberOrders.forEach((order) => {
+      order.items.forEach((item: any) => {
+        if (item.name === "Records") {
+          recordsQty += item.quantity;
+          recordsPrice += item.quantity * item.price;
+        } else if (item.name === "Booklets") {
+          bookletsQty += item.quantity;
+          bookletsPrice += item.quantity * item.price;
+        }
+      });
+    });
+
+    return { totalRevenue, recordsQty, recordsPrice, bookletsQty, bookletsPrice };
+  };
+
+  // Generate November daily revenue data
+  const getRevenueData = () => {
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+
+    const dailyRevenue: { [key: string]: number } = {};
+    
+    // Initialize all days with 0
+    for (let day = 1; day <= daysInMonth; day++) {
+      dailyRevenue[day] = 0;
+    }
+
+    // Calculate revenue per day
+    orders.forEach((order) => {
+      const orderDate = new Date(order.createdAt);
+      if (orderDate.getMonth() === currentMonth && orderDate.getFullYear() === currentYear) {
+        const day = orderDate.getDate();
+        dailyRevenue[day] += order.total;
+      }
+    });
+
+    // Convert to chart format (show every 5 days for clarity)
+    return Object.keys(dailyRevenue)
+      .filter((day) => parseInt(day) % 5 === 0 || parseInt(day) === 1 || parseInt(day) === daysInMonth)
+      .map((day) => ({
+        day: `Nov ${day}`,
+        revenue: dailyRevenue[day],
+      }));
+  };
+
+  const stats = getNovemberStats();
+  const revenueData = getRevenueData();
 
   const getPaymentBadge = (method: string) => {
     if (method === "upi") {
@@ -74,19 +133,52 @@ export default function Admin() {
           </Button>
         </div>
 
+        {/* Statistics Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Total Revenue (Nov)</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-primary">₹{stats.totalRevenue.toLocaleString()}</div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Records Sold</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold">{stats.recordsQty}</div>
+              <p className="text-sm text-muted-foreground mt-1">Total: ₹{stats.recordsPrice.toLocaleString()}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Booklets Sold</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold">{stats.bookletsQty}</div>
+              <p className="text-sm text-muted-foreground mt-1">Total: ₹{stats.bookletsPrice.toLocaleString()}</p>
+            </CardContent>
+          </Card>
+        </div>
+
         {/* Revenue Chart */}
         <Card className="mb-8">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <TrendingUp className="h-5 w-5" />
-              Monthly Revenue
+              November Revenue Trend
             </CardTitle>
+            <CardDescription>Daily revenue tracking for current month</CardDescription>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={revenueData}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
+                <XAxis dataKey="day" />
                 <YAxis />
                 <Tooltip />
                 <Line type="monotone" dataKey="revenue" stroke="hsl(var(--primary))" strokeWidth={2} />

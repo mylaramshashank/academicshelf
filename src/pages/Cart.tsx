@@ -35,6 +35,11 @@ export default function Cart() {
       navigate("/auth");
       return;
     }
+    if (currentUser.email === "admin@samskruti.edu") {
+      toast.error("Admins cannot access the cart");
+      navigate("/");
+      return;
+    }
     loadCart();
   }, [navigate]);
 

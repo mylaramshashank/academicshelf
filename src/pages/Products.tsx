@@ -75,6 +75,11 @@ export default function Products() {
       return;
     }
 
+    if (currentUser.email === "admin@samskruti.edu") {
+      toast.error("Admins cannot purchase products");
+      return;
+    }
+
     const cart = JSON.parse(localStorage.getItem("cart") || "[]");
     const existingItem = cart.find((item: any) => item.id === product.id);
 

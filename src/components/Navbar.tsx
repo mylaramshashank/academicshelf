@@ -9,6 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
+import { ThemeToggle } from "./ThemeToggle";
 
 interface NavbarProps {
   onLogout?: () => void;
@@ -50,6 +51,7 @@ export const Navbar = ({ onLogout }: NavbarProps) => {
           </div>
 
           <div className="flex items-center gap-2">
+            <ThemeToggle />
             {currentUser ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>

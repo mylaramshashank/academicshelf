@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+
 
 export default function Admin() {
   const navigate = useNavigate();
@@ -26,75 +26,22 @@ export default function Admin() {
 
     loadData();
 
-    // Set up real-time subscription for orders
-    const channel = supabase
-      .channel('orders-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'orders'
-        },
-        () => {
-          loadData(); // Reload data when orders change
-        }
-      )
-      .subscribe();
+    const handleStorage = () => {
+      loadData();
+    };
+
+    window.addEventListener("storage", handleStorage);
 
     return () => {
-      supabase.removeChannel(channel);
+      window.removeEventListener("storage", handleStorage);
     };
   }, [navigate]);
 
-  const loadData = async () => {
-    // Load from localStorage for user records (backwards compatibility)
+  const loadData = () => {
+    // Load from localStorage for user records and products
     setUsers(JSON.parse(localStorage.getItem("users") || "[]"));
     setProducts(JSON.parse(localStorage.getItem("products") || "[]"));
-
-    // Fetch orders from Supabase for real-time data
-    try {
-      const { data: ordersData, error: ordersError } = await supabase
-        .from("orders")
-        .select(`
-          *,
-          order_items (
-            id,
-            quantity,
-            price,
-            product_id,
-            products (name)
-          )
-        `)
-        .order("created_at", { ascending: false });
-
-      if (ordersError) throw ordersError;
-
-      // Transform Supabase data to match localStorage format
-      const transformedOrders = ordersData?.map((order: any) => ({
-        id: order.order_code,
-        userId: order.user_id,
-        userName: "User", // We don't have this in the DB
-        userEmail: "",
-        rollNo: "",
-        items: order.order_items.map((item: any) => ({
-          id: item.product_id,
-          name: item.products.name,
-          quantity: item.quantity,
-          price: item.price,
-        })),
-        total: order.total,
-        paymentMethod: order.payment_method,
-        status: order.status,
-        createdAt: order.created_at,
-      })) || [];
-
-      setOrders(transformedOrders);
-    } catch (error: any) {
-      console.error("Error loading orders:", error);
-      // Fallback to localStorage if Supabase fails
-      setOrders(JSON.parse(localStorage.getItem("orders") || "[]"));
-    }
+    setOrders(JSON.parse(localStorage.getItem("orders") || "[]"));
   };
 
   const updateStock = (productId: string, newStock: number) => {

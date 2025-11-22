@@ -4,7 +4,6 @@ import { Trash2, CreditCard, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
   DialogContent,
@@ -28,6 +27,7 @@ export default function Cart() {
   const [paymentMethod, setPaymentMethod] = useState<"upi" | "cash">("cash");
   const [showSuccess, setShowSuccess] = useState(false);
   const [orderCode, setOrderCode] = useState("");
+  const [orderTotal, setOrderTotal] = useState(0);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -80,77 +80,49 @@ export default function Cart() {
     setShowCheckout(true);
   };
 
-  const confirmOrder = async () => {
+  const confirmOrder = () => {
     const currentUser = JSON.parse(localStorage.getItem("currentUser") || "null");
     const code = "AC" + Date.now();
     const total = getTotalPrice();
 
-    try {
-      // Get user's Supabase auth ID
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast.error("Please log in again");
-        navigate("/auth");
-        return;
+    const order = {
+      id: code,
+      userId: currentUser.id,
+      userName: currentUser.name,
+      userEmail: currentUser.email,
+      rollNo: currentUser.rollNo,
+      items: cart,
+      total,
+      paymentMethod,
+      status: "Pending",
+      createdAt: new Date().toISOString(),
+    };
+
+    const orders = JSON.parse(localStorage.getItem("orders") || "[]");
+    orders.push(order);
+    localStorage.setItem("orders", JSON.stringify(orders));
+
+    // Decrease stock based on purchased items
+    const products = JSON.parse(localStorage.getItem("products") || "[]");
+    const updatedProducts = products.map((product: any) => {
+      const cartItem = cart.find((item) => item.id === product.id);
+      if (cartItem) {
+        return {
+          ...product,
+          stock: Math.max(0, product.stock - cartItem.quantity),
+        };
       }
+      return product;
+    });
+    localStorage.setItem("products", JSON.stringify(updatedProducts));
+    window.dispatchEvent(new Event("storage"));
 
-      // Insert order into Supabase
-      const { data: orderData, error: orderError } = await supabase
-        .from("orders")
-        .insert({
-          order_code: code,
-          user_id: user.id,
-          total,
-          payment_method: paymentMethod,
-          status: "pending",
-        })
-        .select()
-        .single();
-
-      if (orderError) throw orderError;
-
-      // Insert order items
-      const orderItems = cart.map((item) => ({
-        order_id: orderData.id,
-        product_id: item.id,
-        quantity: item.quantity,
-        price: item.price,
-      }));
-
-      const { error: itemsError } = await supabase
-        .from("order_items")
-        .insert(orderItems);
-
-      if (itemsError) throw itemsError;
-
-      // Also save to localStorage for backwards compatibility
-      const order = {
-        id: code,
-        userId: currentUser.id,
-        userName: currentUser.name,
-        userEmail: currentUser.email,
-        rollNo: currentUser.rollNo,
-        items: cart,
-        total,
-        paymentMethod,
-        status: "Pending",
-        createdAt: new Date().toISOString(),
-      };
-
-      const orders = JSON.parse(localStorage.getItem("orders") || "[]");
-      orders.push(order);
-      localStorage.setItem("orders", JSON.stringify(orders));
-
-      setOrderCode(code);
-      setShowCheckout(false);
-      setShowSuccess(true);
-      localStorage.setItem("cart", JSON.stringify([]));
-      setCart([]);
-      toast.success("Order placed successfully!");
-    } catch (error: any) {
-      console.error("Error placing order:", error);
-      toast.error("Failed to place order: " + error.message);
-    }
+    setOrderCode(code);
+    setOrderTotal(total);
+    setShowCheckout(false);
+    setShowSuccess(true);
+    localStorage.setItem("cart", JSON.stringify([]));
+    setCart([]);
   };
 
   return (
@@ -315,7 +287,7 @@ export default function Cart() {
                 <h4 className="font-semibold mb-2 flex items-center gap-2 text-amber-900">
                   💰 Cash Payment
                 </h4>
-                <p className="text-sm text-amber-800">Please pay ₹{getTotalPrice()} at the library counter</p>
+                <p className="text-sm text-amber-800">Please pay ₹{orderTotal} at the library counter</p>
               </div>
             )}
 

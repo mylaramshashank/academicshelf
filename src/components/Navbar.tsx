@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { BookOpen, User, LogOut } from "lucide-react";
+import { BookOpen, User, LogOut, Menu } from "lucide-react";
 import { Button } from "./ui/button";
 import {
   DropdownMenu,
@@ -9,6 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "./ui/sheet";
 import { ThemeToggle } from "./ThemeToggle";
 
 interface NavbarProps {
@@ -38,6 +39,7 @@ export const Navbar = ({ onLogout }: NavbarProps) => {
             Academic Shelf
           </Link>
 
+          {/* Desktop navigation */}
           <div className="hidden md:flex items-center gap-1">
             {navLinks.map((link) => (
               <Button
@@ -50,7 +52,8 @@ export const Navbar = ({ onLogout }: NavbarProps) => {
             ))}
           </div>
 
-          <div className="flex items-center gap-2">
+          {/* Desktop user controls */}
+          <div className="hidden md:flex items-center gap-2">
             <ThemeToggle />
             {currentUser ? (
               <DropdownMenu>
@@ -82,6 +85,64 @@ export const Navbar = ({ onLogout }: NavbarProps) => {
                 <Link to="/auth">Login</Link>
               </Button>
             )}
+          </div>
+
+          {/* Mobile controls */}
+          <div className="flex items-center gap-2 md:hidden">
+            <ThemeToggle />
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="outline" size="icon">
+                  <Menu className="h-5 w-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right">
+                <SheetHeader>
+                  <SheetTitle className="flex items-center gap-2">
+                    <BookOpen className="h-5 w-5" />
+                    Academic Shelf
+                  </SheetTitle>
+                </SheetHeader>
+                <div className="mt-6 space-y-2">
+                  {navLinks.map((link) => (
+                    <Button
+                      key={link.path}
+                      variant={location.pathname === link.path ? "default" : "ghost"}
+                      className="w-full justify-start"
+                      asChild
+                    >
+                      <Link to={link.path}>{link.label}</Link>
+                    </Button>
+                  ))}
+
+                  {!currentUser && (
+                    <Button className="w-full justify-start mt-2" asChild>
+                      <Link to="/auth">Login</Link>
+                    </Button>
+                  )}
+
+                  {currentUser && (
+                    <div className="mt-4 space-y-3 border-t pt-4">
+                      <div className="text-sm">
+                        <p className="font-semibold">{currentUser.name}</p>
+                        <p className="text-muted-foreground text-xs">{currentUser.email}</p>
+                        {currentUser.rollNo && (
+                          <p className="text-muted-foreground text-xs">Roll: {currentUser.rollNo}</p>
+                        )}
+                      </div>
+                      <Button
+                        variant="destructive"
+                        className="w-full justify-start"
+                        onClick={() => onLogout?.()}
+                      >
+                        <LogOut className="h-4 w-4 mr-2" />
+                        Logout
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </SheetContent>
+            </Sheet>
           </div>
         </div>
       </div>

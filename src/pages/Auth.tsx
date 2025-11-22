@@ -21,9 +21,11 @@ export default function Auth() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
+    const normalizedEmail = formData.email.trim().toLowerCase();
+
     if (isLogin) {
-      // Admin login check first
-      if (formData.email === "admin@samskruti.edu" && formData.password === "admin123") {
+      // Admin login check first (case-insensitive email)
+      if (normalizedEmail === "admin@samskruti.edu" && formData.password === "admin123") {
         const adminUser = {
           id: "admin",
           email: "admin@samskruti.edu",
@@ -38,7 +40,7 @@ export default function Auth() {
       // Regular user login
       const users = JSON.parse(localStorage.getItem("users") || "[]");
       const user = users.find(
-        (u: any) => u.email === formData.email && u.password === formData.password
+        (u: any) => u.email === normalizedEmail && u.password === formData.password
       );
 
       if (user) {
@@ -51,7 +53,9 @@ export default function Auth() {
     } else {
       // Register logic
       const users = JSON.parse(localStorage.getItem("users") || "[]");
-      const existingUser = users.find((u: any) => u.email === formData.email);
+      const existingUser = users.find(
+        (u: any) => u.email.toLowerCase() === normalizedEmail
+      );
 
       if (existingUser) {
         toast.error("Email already registered");
@@ -60,9 +64,9 @@ export default function Auth() {
 
       const newUser = {
         id: Date.now().toString(),
-        name: formData.name,
-        rollNo: formData.rollNo,
-        email: formData.email,
+        name: formData.name.trim(),
+        rollNo: formData.rollNo.trim(),
+        email: normalizedEmail,
         password: formData.password,
         registeredAt: new Date().toISOString(),
       };

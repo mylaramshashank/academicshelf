@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { TrendingUp, Package, Users as UsersIcon, Plus, Minus } from "lucide-react";
+import { TrendingUp, Package, Users as UsersIcon } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function Admin() {
   const navigate = useNavigate();
@@ -23,18 +25,83 @@ export default function Admin() {
     }
 
     loadData();
+
+    // Set up real-time subscription for orders
+    const channel = supabase
+      .channel('orders-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'orders'
+        },
+        () => {
+          loadData(); // Reload data when orders change
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [navigate]);
 
-  const loadData = () => {
+  const loadData = async () => {
+    // Load from localStorage for user records (backwards compatibility)
     setUsers(JSON.parse(localStorage.getItem("users") || "[]"));
-    setOrders(JSON.parse(localStorage.getItem("orders") || "[]"));
     setProducts(JSON.parse(localStorage.getItem("products") || "[]"));
+
+    // Fetch orders from Supabase for real-time data
+    try {
+      const { data: ordersData, error: ordersError } = await supabase
+        .from("orders")
+        .select(`
+          *,
+          order_items (
+            id,
+            quantity,
+            price,
+            product_id,
+            products (name)
+          )
+        `)
+        .order("created_at", { ascending: false });
+
+      if (ordersError) throw ordersError;
+
+      // Transform Supabase data to match localStorage format
+      const transformedOrders = ordersData?.map((order: any) => ({
+        id: order.order_code,
+        userId: order.user_id,
+        userName: "User", // We don't have this in the DB
+        userEmail: "",
+        rollNo: "",
+        items: order.order_items.map((item: any) => ({
+          id: item.product_id,
+          name: item.products.name,
+          quantity: item.quantity,
+          price: item.price,
+        })),
+        total: order.total,
+        paymentMethod: order.payment_method,
+        status: order.status,
+        createdAt: order.created_at,
+      })) || [];
+
+      setOrders(transformedOrders);
+    } catch (error: any) {
+      console.error("Error loading orders:", error);
+      // Fallback to localStorage if Supabase fails
+      setOrders(JSON.parse(localStorage.getItem("orders") || "[]"));
+    }
   };
 
-  const updateStock = (productId: string, change: number) => {
+  const updateStock = (productId: string, newStock: number) => {
+    const stockValue = Math.max(0, newStock);
     const updatedProducts = products.map((p) => {
       if (p.id === productId) {
-        return { ...p, stock: Math.max(0, p.stock + change) };
+        return { ...p, stock: stockValue };
       }
       return p;
     });
@@ -311,23 +378,14 @@ export default function Admin() {
                           <div className="flex items-center gap-4">
                             <span className="text-sm text-muted-foreground">Current Stock:</span>
                             <div className="flex items-center gap-2">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => updateStock(product.id, -10)}
-                              >
-                                <Minus className="h-4 w-4" />
-                                10
-                              </Button>
-                              <span className="w-16 text-center font-bold text-lg">{product.stock}</span>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => updateStock(product.id, 10)}
-                              >
-                                <Plus className="h-4 w-4" />
-                                10
-                              </Button>
+                              <Input
+                                type="number"
+                                min="0"
+                                value={product.stock}
+                                onChange={(e) => updateStock(product.id, parseInt(e.target.value) || 0)}
+                                className="w-32 text-center font-bold text-lg"
+                              />
+                              <span className="text-sm text-muted-foreground">units</span>
                             </div>
                           </div>
                         </div>

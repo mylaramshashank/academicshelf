@@ -4,6 +4,7 @@ import { Trash2, CreditCard, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
   DialogContent,
@@ -79,32 +80,77 @@ export default function Cart() {
     setShowCheckout(true);
   };
 
-  const confirmOrder = () => {
+  const confirmOrder = async () => {
     const currentUser = JSON.parse(localStorage.getItem("currentUser") || "null");
     const code = "AC" + Date.now();
+    const total = getTotalPrice();
 
-    const order = {
-      id: code,
-      userId: currentUser.id,
-      userName: currentUser.name,
-      userEmail: currentUser.email,
-      rollNo: currentUser.rollNo,
-      items: cart,
-      total: getTotalPrice(),
-      paymentMethod,
-      status: "Pending",
-      createdAt: new Date().toISOString(),
-    };
+    try {
+      // Get user's Supabase auth ID
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("Please log in again");
+        navigate("/auth");
+        return;
+      }
 
-    const orders = JSON.parse(localStorage.getItem("orders") || "[]");
-    orders.push(order);
-    localStorage.setItem("orders", JSON.stringify(orders));
+      // Insert order into Supabase
+      const { data: orderData, error: orderError } = await supabase
+        .from("orders")
+        .insert({
+          order_code: code,
+          user_id: user.id,
+          total,
+          payment_method: paymentMethod,
+          status: "pending",
+        })
+        .select()
+        .single();
 
-    setOrderCode(code);
-    setShowCheckout(false);
-    setShowSuccess(true);
-    localStorage.setItem("cart", JSON.stringify([]));
-    setCart([]);
+      if (orderError) throw orderError;
+
+      // Insert order items
+      const orderItems = cart.map((item) => ({
+        order_id: orderData.id,
+        product_id: item.id,
+        quantity: item.quantity,
+        price: item.price,
+      }));
+
+      const { error: itemsError } = await supabase
+        .from("order_items")
+        .insert(orderItems);
+
+      if (itemsError) throw itemsError;
+
+      // Also save to localStorage for backwards compatibility
+      const order = {
+        id: code,
+        userId: currentUser.id,
+        userName: currentUser.name,
+        userEmail: currentUser.email,
+        rollNo: currentUser.rollNo,
+        items: cart,
+        total,
+        paymentMethod,
+        status: "Pending",
+        createdAt: new Date().toISOString(),
+      };
+
+      const orders = JSON.parse(localStorage.getItem("orders") || "[]");
+      orders.push(order);
+      localStorage.setItem("orders", JSON.stringify(orders));
+
+      setOrderCode(code);
+      setShowCheckout(false);
+      setShowSuccess(true);
+      localStorage.setItem("cart", JSON.stringify([]));
+      setCart([]);
+      toast.success("Order placed successfully!");
+    } catch (error: any) {
+      console.error("Error placing order:", error);
+      toast.error("Failed to place order: " + error.message);
+    }
   };
 
   return (
